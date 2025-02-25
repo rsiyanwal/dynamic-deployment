@@ -1,0 +1,36 @@
+version: "3.8"
+services:
+  producer:
+    image: producer:latest
+    build:
+      context: .
+      dockerfile: Dockerfile-producer
+    ports:
+      - "5000:5000"
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  consumer:
+    image: consumer:latest
+    build:
+      context: .
+      dockerfile: Dockerfile-consumer
+    depends_on:
+      - producer
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+# The "services" section defines the containers (services) that will run as part of the application. In this case we have two services: producer and consumer.
+# Let's talk about producer service. First we defined the image name and tag - producer:latest. This is the name of the image that will be built. 
+# Next we specify how to "build" the docker image for producer service - "context" is where the docker will look for the files, in our case all the files are in the same folder
+# and at the same level, therefore, we use "." as the context to tell docker to use the current directory. Once the directory is set, we give instructions to build the image. 
+# the instructions we already wrote in Dockerfile-producer. If you remember, producer.py has to listen to the incoming requests on certain port, we chose "port" 5000 for it. 
+# We also mapped the "producer:latest's" port with host machine's port as well so that we can get the output of this producer.py program running inside "producer:latest" container
+# to the host machine as well. We are also specifying the deployment policy of this container as well - we only want one container running (replicas: 1) and we want the container
+# to restart if it fails (condition: on-failure). 
+# Understanding how we setup the consumer container should be easy now. We did everything same as we did with "producer:latest" container, except, we specified that the 
+# consumer container should run after producer container. We did it by using (depends_on: - producer)
