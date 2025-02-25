@@ -1,0 +1,13 @@
+FROM python:3.9
+WORKDIR /app  
+COPY consumer.py /app/
+RUN pip install requests
+CMD [ "python", "consumer.py" ]
+
+# When we run this file, the docker will:
+# - Use the base image python:3.9 from docker hub. This file includes Python 3.9 and a minimal OS such as Alpine. 
+# - Inside the container we choose the directory /app as the working directory. All the subsequent commands will be executed in this directory. 
+#   If the directory don't exist docker will create it.
+# - Next, we'll copy "consumer.py" program to /app directory (copying the program from host machine to the container).
+# - Installing the dependencies (in this case we only have one: requests).
+# - Finally, executing the program in the container.
