@@ -87,21 +87,17 @@ The network created by Docker Compose is a **bridge network**. The network is na
 | **Purpose** | Internal communication | Load balancing and routing | Cross-host communication |
 | **Created by** | Docker Compose | Docker Swarm | Docker Swarm |
 
-We will look at `Docker Swarm` next. If you have completed the tutorial this far, then **you have completed** the deployment of Dockerized application on a single host. There are many other things you can do with the application, such as:
+We will look at `Docker Swarm` next. If you have completed the tutorial this far, then **you have completed** the deployment of the Dockerizethe d application on a single host. There are many other things you can do with the application, such as:
 - Check logs of the services: `docker compose logs -f consumer`
 - Scaling the services
 - Stop the application: `docker compose down`
 
-### Questions
+#### Questions
 1. What does `depends_on` do in the `docker-compose.yml` file?
 2. Can you access the producer service in a browser?
 
-
-
-
-
-
-
+### Scenario 02: On Different Machines
+Now, we will **scale the services across multiple Raspberry Pis**. We will learn the process of setting up a Docker Swarm cluster using multiple Raspberry Pis. Docker Swarm is a container orchestration tool that allows you to manage multiple Docker hosts as a single virtual system. 
 
 
 
