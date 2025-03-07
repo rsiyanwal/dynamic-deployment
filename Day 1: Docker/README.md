@@ -15,7 +15,8 @@ myapp/
 ├── consumer.py
 └── producer.py
 ```
-As you can see, all the files are located in the same folder, meaning there is no hierarchy. This is done just because of laziness. It is not mandatory to have your folder set up in this fashion. You may also notice that the folder name is "myapp," but that's not the actual case either (anyway, it doesn't matter). 
+> [!NOTE]
+> As you can see, all the files are located in the same folder, meaning there is no hierarchy. This is done just because of laziness. It is not mandatory to have your folder set up in this fashion. You may also notice that the folder name is "myapp," but that's not the actual case either (_when you download the code for this day, just change "Day 1: Docker" to "myapp"_). 
 
 ## 1. Understanding the problem statement
 You have two Python services that need to communicate:
@@ -60,7 +61,7 @@ PRODUCER_URL = "http://192.168.x.x:5000/number"
 # Use a public IP or domain name if the server is exposed to the internet
 PRODUCER_URL = "http://example.com:5000/number"
 ```
-
+![Image](https://github.com/user-attachments/assets/36c4f6c6-17a1-4ece-8371-854a8aacaec0)
 ## 2. There are two deployment scenarios
 | Scenario | Solution |
 | -------- | -------- |
@@ -92,13 +93,98 @@ We will look at `Docker Swarm` next. If you have completed the tutorial this far
 - Scaling the services
 - Stop the application: `docker compose down`
 
+![Image](https://github.com/user-attachments/assets/f7dc8404-8a8c-405a-be19-08f499d8eaa6)
+
 #### Questions
 1. What does `depends_on` do in the `docker-compose.yml` file?
 2. Can you access the producer service in a browser?
 
 ### Scenario 02: On Different Machines
-Now, we will **scale the services across multiple Raspberry Pis**. We will learn the process of setting up a Docker Swarm cluster using multiple Raspberry Pis. Docker Swarm is a container orchestration tool that allows you to manage multiple Docker hosts as a single virtual system. 
+Now, we will **scale the services across multiple Raspberry Pis**. Right now, we will use two Raspberry Pis running on Raspbian OS. 
+#### Step 01: Initialize Docker Swarm on the Manager node
+Choose any of the Pis as a manager node and run the command mentioned below on it:
+```
+docker swarm init
+```
+This command initializes a Docker Swarm on the Pi, making it the **manager node**. The manager node is responsible for managing the **Swarm cluster**, maintaining the **cluster state**, and handling **worker nodes**. 
+- A **Swarm cluster** is a group of Docker hosts(nodes) that work together as a single virtual system. It consists of Manager Nodes that manage the cluster and tasks and Worker Nodes that run the tasks(containers) assigned by the Manager node. It allows us to _deploy and manage machines across multiple machines_.
+- **Scheduling services** refers to assigning tasks (containers) to worker nodes. The manager node decides:
+  - Appropriate worker node for a specific task
+  - Distribution of the tasks across the cluster for optimum performance and resource utilization (For example, if you deploy a service with 5 replicas, the manager node will schedule 5 containers across the available worker nodes)
+- The **cluster state** refers to the current status and configuration of the Swarm cluster. The cluster state is maintained by the manager node(s). It is a dynamic representation of what is actually happening in the cluster. 
+- **Worker nodes** are the machines in the Swarm cluster that run the tasks (containers) assigned to them by the manager node. The manager node handles worker nodes by:
+  - Monitoring the health and status of the worker nodes
+  - Rescheduling tasks if a worker node fails
+  - Distributing tasks evenly across worker nodes to ensure efficient resource utilization 
+> [!NOTE]
+> Imagine you have a Swarm cluster with:
+> - 1 Manager node
+> - 3 Worker nodes
+> You deploy a service with 3 replicas. The manager node schedules the service by:
+> - Assigning 1 replica to each worker node
+> - Ensuring the desired state of 3 replicas is maintained
+> If one of the worker nodes fails, the manager node detects the failure and reschedules the affected tasks on the **remaining health nodes**.
+> If you want to scale the service to 6 replicas, the manager node will schedule 2 replicas on each worker node.
 
+#### Step 02: Initialize the Worker nodes
+When you complete Step 01, the manager node will give you an output similar to the following:
+```
+Swarm initialized: current node (7x4..) is now a manager.
 
+To add a worker to this swarm, run the following command:
+
+    docker swarm join --token SWMTKN-1-0h.. <IP_Address>:<Port>
+
+To add a manager to this swarm, run 'docker swarm join-token manager' and follow the instructions.
+```
+**As it says, we need to run the given command on all the nodes we want as Worker nodes**. Ignore the `docker swarm join-token manager` command for now. If you succeed, you will get a message, `This node joined a swarm as a worker` from all the Worker nodes.
+
+You have successfully created a Swarm cluster. Let's verify it:
+```
+docker node ls
+```
+
+#### Step 03: Deploy the Swarm Stack (deploying the application on Swarm cluster)
+On the Manager node, navigate to the directory that has all the files we created so far. Make changes in the docker-compose.yml file by incrementing the consumer's replica by 1 (making it 2) and run the command:
+```
+docker stack deploy -c docker-compose.yml myapp
+```
+We are deploying the application that will have 1 producer service and 2 consumer services. Let's verify:
+```
+docker service ls
+```
+You should get an output like this:
+```
+ID             NAME             MODE         REPLICAS   IMAGE             PORTS
+kich........   myapp_consumer   replicated   2/2        consumer:latest   
+atew........   myapp_producer   replicated   1/1        producer:latest   *:5000->5000/tcp
+```
+It means that 1 producer service and 2 consumer services are running successfully. But where exactly are they running (which service at what node)? First let's check the Producer service:
+```
+docker service ps myapp_producer
+```
+Which should give you the following output (if you don't get it, keep on reading):
+```
+ID             NAME               IMAGE             NODE        DESIRED STATE   CURRENT STATE            ERROR     PORTS
+9llr........   myapp_producer.1   producer:latest   localhost   Running         Running 21 minutes ago 
+```
+`localhost` is the name of my Master node (I know it is confusing), but it is not the actual 127.0.0.1 localhost but just the machine's name. The output states that the Producer service is running on the Master node named localhost. Now, let's see where Consumer services are running:
+```
+docker service ps myapp_consumer
+```
+Which should give you the following output:
+```
+ID             NAME                   IMAGE             NODE        DESIRED STATE   CURRENT STATE             ERROR                              PORTS
+7l73........   myapp_consumer.1       consumer:latest   localhost   Running         Running 18 minutes ago                                       
+2sfs........   myapp_consumer.2       consumer:latest   localhost   Running         Running 17 minutes ago                                       
+88s9........    \_ myapp_consumer.2   consumer:latest   rasp11      Shutdown        Rejected 17 minutes ago   "No such image: consumer:latest"   
+vro5........    \_ myapp_consumer.2   consumer:latest   rasp11      Shutdown        Rejected 17 minutes ago   "No such image: consumer:latest"   
+n21c........    \_ myapp_consumer.2   consumer:latest   rasp11      Shutdown        Rejected 18 minutes ago   "No such image: consumer:latest"   
+mfso........    \_ myapp_consumer.2   consumer:latest   rasp11      Shutdown        Rejected 18 minutes ago   "No such image: consumer:latest"   
+```
+Observe that we have an error. "No such image: consumer:latest" is available at `rasp11` (which, btw, is the name of my worker node). 
+> [!IMPORTANT]
+> We got this error because we don't have the images at the worker node. Yet, the Master node managed to give us two services. It did it by hosting both of the consumer services on its own. Let this be **the first example we have witnessed of the way Manager node handles failure**. In this scenario, one of the two machines is not useful/unavailable to us. 
+> In Docker Swarm, when you deploy an application, all the Docker images must be available on all nodes where the service is scheduled to run. If the image is missing on a node, the task will fail with the error `"No such image: <service_name>"`.
 
 
