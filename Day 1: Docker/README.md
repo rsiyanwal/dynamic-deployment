@@ -144,7 +144,7 @@ You have successfully created a Swarm cluster. Let's verify it:
 docker node ls
 ```
 
-#### Step 03: Deploy the Swarm Stack (deploying the application on Swarm cluster)
+#### Step 03: Deploy the Swarm Stack (deploying the application on the Swarm cluster)
 On the Manager node, navigate to the directory that has all the files we created so far. Make changes in the docker-compose.yml file by incrementing the consumer's replica by 1 (making it 2) and run the command:
 ```
 docker stack deploy -c docker-compose.yml myapp
@@ -182,9 +182,45 @@ vro5........    \_ myapp_consumer.2   consumer:latest   rasp11      Shutdown    
 n21c........    \_ myapp_consumer.2   consumer:latest   rasp11      Shutdown        Rejected 18 minutes ago   "No such image: consumer:latest"   
 mfso........    \_ myapp_consumer.2   consumer:latest   rasp11      Shutdown        Rejected 18 minutes ago   "No such image: consumer:latest"   
 ```
-Observe that we have an error. "No such image: consumer:latest" is available at `rasp11` (which, btw, is the name of my worker node). 
+Observe that we have an error. "No such image: consumer:latest" at `rasp11` (which, btw, is the name of my worker node). 
 > [!IMPORTANT]
 > We got this error because we don't have the images at the worker node. Yet, the Master node managed to give us two services. It did it by hosting both of the consumer services on its own. Let this be **the first example we have witnessed of the way Manager node handles failure**. In this scenario, one of the two machines is not useful/unavailable to us. 
 > In Docker Swarm, when you deploy an application, all the Docker images must be available on all nodes where the service is scheduled to run. If the image is missing on a node, the task will fail with the error `"No such image: <service_name>"`.
+
+#### Step 04: Pushing the Docker images to all the Worker nodes
+You can use any of the following ways:
+##### 01. The simple old way - 
+You can copy-paste the entire directory on every Worker node and run `docker compose up --build` command. 
+##### 02. Push images to Docker Registry - 
+- Login to your docker account: `docker login`
+- Tag the image with your Docker Hub username: `docker tag consumer:latest <your-dockerhub-username>/consumer:latest`
+- Push the tagged image to Docker Hub: `docker push <your-dockerhub-username>/consumer:latest`
+- Open your Docker Hub account on a browser and validate if the image is there. You will notice that the image name is not `consumer` anymore but `<your-dockerhub-username>/consumer`. Therefore, you have to make a change in your Docker compose file. Open it and change the Consumer service as:
+```
+consumer:
+  image: <your-dockerhub-username>/consumer:latest
+...
+```
+- Pull the image on Worker nodes: `docker pull <your-dockerhub-username>/consumer:latest`
+- Redeploy the Stack: `docker stack deploy -c docker-compose.yml myapp`
+> [!IMPORTANT]
+> Do the same for the Producer image as well
+
+Verify the changes. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
