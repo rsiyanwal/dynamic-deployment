@@ -13,6 +13,9 @@ These problems of heterogeneity and scale can be addressed using **FogDEFT frame
 ## Learning FogDEFT in one week
 ### Day 1: Hands-on guide to Docker and Docker Swarm with Python Microservices
 
+> [!TIP]
+> Make a list of all the tasks we are doing manually.
+
 # References:
 [^1]: S. N. Srirama and S. Basak, "Fog Computing out of the Box with FogDEFT Framework: A Case Study," 2022 IEEE 15th International Conference on Cloud Computing (CLOUD), Barcelona, Spain, 2022, pp. 342-350, doi: 10.1109/CLOUD55607.2022.00057.
 [^2]: Thalla R, Srirama SN. FogDEFTKube: Standards-compliant dynamic deployment of fog service containers. Softw: Pract Exper. 2024; 54(12): 2428-2453. doi: 10.1002/spe.3354
