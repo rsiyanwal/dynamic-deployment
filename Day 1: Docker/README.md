@@ -4,7 +4,6 @@ Welcome to the Day 1 of learning FogDEFT. In this tutorial, you will learn `Dock
 - **Establish communication** between multiple containers.
 - Use **Docker Compose** to manage multi-container applications on a single machine.
 - Deploy the **same setup on multiple Raspberry Pis** using **Docker Swarm**.
-- **Understand orchestration** by comparing Docker Compose and Docker Swarm. 
 
 This is how the files are managed for our application:
 ```
