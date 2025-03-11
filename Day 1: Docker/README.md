@@ -1,5 +1,5 @@
 # Day 01
-Welcome to the Day 1 of learning FogDEFT. In this tutorial, you will learn Docker and Docker Swarm concepts with the help of Python microservices. In this hands-on tutorial, you will:
+Welcome to the Day 1 of learning FogDEFT. In this tutorial, you will learn `Docker` and `Docker Swarm` concepts with the help of `Python` and `Flask.` In this hands-on tutorial, you will:
 - **Containerize Python applications** using Docker.
 - **Establish communication** between multiple containers.
 - Use **Docker Compose** to manage multi-container applications on a single machine.
@@ -23,7 +23,7 @@ You have two Python services that need to communicate:
 1. `Producer service` - Generates random numbers
 2. `Consumer service` - Receives numbers from the Producer and prints them
 
-I request you to examine both the files: [Producer.py](https://github.com/rsiyanwal/dynamic-deployment/blob/main/Day%201%3A%20Docker/producer.py) and [Consumer.py](https://github.com/rsiyanwal/dynamic-deployment/blob/main/Day%201%3A%20Docker/consumer.py) to understand them. The code is well-commented. Please run both services to see them in action, **but make sure you run the producer.py first**. In consumer.py, you must change the value of `PRODUCER_URL` with one of the URLs provided by the `producer.py,` which generally includes `127.0.0.1` and your local IP address. Therefore, one of the valid values is `http://127.0.0.1:5000/number`.
+I request you to examine both the files: [Producer.py](https://github.com/rsiyanwal/dynamic-deployment/blob/main/Day%201%3A%20Docker/producer.py) and [Consumer.py](https://github.com/rsiyanwal/dynamic-deployment/blob/main/Day%201%3A%20Docker/consumer.py) to understand them. The code is well-commented. Please run both services to see them in action, **but make sure you run the `producer.py` first**. In `consumer.py`, you must change the value of `PRODUCER_URL` with one of the URLs provided by the `producer.py,` which generally includes `127.0.0.1` and your local IP address. Therefore, one of the valid values is `http://127.0.0.1:5000/number`.
 ```
 # Defining the Producer's URL
 """
@@ -32,7 +32,7 @@ When you run producer.py, replace the server_address with any of the ones in the
 """
 PRODUCER_URL = "http://<server_address>:5000/number"
 ```
-If you just run the producer.py service, then on your web browser, if you visit the URL, you should get the following output:
+If you just run the `producer.py` service, then on your web browser if you visit any of the URLs, you should get the following output:
 ```
 {
   "number": 73
@@ -42,7 +42,7 @@ Of course, the number will be different. **How does it work?** When you run the 
 - Generate a random number between 1 and 180.
 - Return the number as a JSON response.
 
-When you run the consumer.py service, it sends an **HTTP GET** request to `http://<server-address>:5000/number`. If the request is successful, it will parse the JSON response and print the number. If it fails, it prints an error message. After each request, it waits for 3 seconds before repeating the process. 
+When you run the `consumer.py` service, it sends an **HTTP GET** request to `http://<server-address>:5000/number`. If the request is successful, it will parse the JSON response and print the number. If it fails, it prints an error message. After each request, it waits for 3 seconds before repeating the process. 
 
 ### What does `0.0.0.0` mean?
 `0.0.0.0` is a special IP address that listens on all available network interfaces. It means that it will accept incoming connections from:
@@ -69,7 +69,7 @@ PRODUCER_URL = "http://example.com:5000/number"
 | Services **run on different machines** (Raspberry Pis in this case) | Use Docker Swarm |
 
 ### Scenario 01: On the same machine
-Once you are done running the application, let's start containerizing it. We need to create **Dockerfiles** for each service. Please take a look at [Dockerfile-consumer](https://github.com/rsiyanwal/dynamic-deployment/blob/main/Day%201%3A%20Docker/Dockerfile-consumer) and [Dockerfile-producer](https://github.com/rsiyanwal/dynamic-deployment/blob/main/Day%201%3A%20Docker/Dockerfile-producer). The files are very well explained and help you to understand how we dockerized the consumer.py and producer.py files respectively. **Needs a Docker primer here**
+Once you are done running the application, let's start **containerizing** it. We need to create **Dockerfiles** for each service. Please take a look at [Dockerfile-consumer](https://github.com/rsiyanwal/dynamic-deployment/blob/main/Day%201%3A%20Docker/Dockerfile-consumer) and [Dockerfile-producer](https://github.com/rsiyanwal/dynamic-deployment/blob/main/Day%201%3A%20Docker/Dockerfile-producer). The files are very well explained and help you to understand how we dockerized the consumer.py and producer.py files respectively. Although everything relevant to Docker will be taught in this workshop, if you want an in-depth understanding of Docker, you can follow the [tutorials](https://www.youtube.com/playlist?list=PLlsmxlJgn1HK2hnazfLBl8szdF_5e64GE) by [Geekific](https://www.youtube.com/@geekific) on YouTube.
 
 Now, we have two services, and we need **Docker Compose** to manage them. [This](https://github.com/rsiyanwal/dynamic-deployment/blob/main/Day%201%3A%20Docker/docker-compose.yml) is a docker-compose file for this application. Again, please take a look at the file to understand it. This file defines and connects both services. To run the docker-compose file, use the following command: `docker compose up --build`.
 
@@ -208,13 +208,23 @@ consumer:
 - Redeploy the Stack: `docker stack deploy -c docker-compose.yml myapp`
 > [!IMPORTANT]
 > Do the same for the Producer image as well
+Verify the changes (depending on your nodes, you may run into an error, so figure out the cause of the error). 
 
-Verify the changes. 
+#### Questions
+1. Have you noticed that the image sizes on Docker Hub and your system differ? Why?
+2. To get the Docker Swarm cluster working as intended, ideally, what should be your node's specifications? 
 
-
-
-
-
+****
+### Good to know
+Let's talk about **cluster state** that we briefly discussed before. The `docker-compose.yml` file is used to define the **desired state** of an application. It specifies:
+- The services to be deployed
+- The number of replicas for each services
+- The configuration for each services (e.g., images, ports, etc.)
+When you deploy the stack using `docker stack deploy` the Docker Swarm uses the `docker-compose.yml` file to determine the desired state of the application. The manager node ensures that the **actual state** of the cluster matches with the **desired state**. The manager node continuously monitors the actual state and takes appropriate actions to align it with the desired state. For example:
+- If a replica of the service fails, the manager node will restart it.
+- If a worker node goes down, the manager node will reschedule the affected tasks on healthy nodes.
+****
+### Congratulations on completing Day 01 :fire:. I know it wasn't easy. You deserve a pat on your back. Good work!
 
 
 
