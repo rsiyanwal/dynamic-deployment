@@ -159,7 +159,7 @@ ID             NAME             MODE         REPLICAS   IMAGE             PORTS
 kich........   myapp_consumer   replicated   2/2        consumer:latest   
 atew........   myapp_producer   replicated   1/1        producer:latest   *:5000->5000/tcp
 ```
-It means that 1 producer service and 2 consumer services are running successfully. But where exactly are they running (which service at what node)? First let's check the Producer service:
+It means that 1 producer service and 2 consumer services are running successfully. But where exactly are they running (which service at what node)? First, let's check the Producer service:
 ```
 docker service ps myapp_producer
 ```
@@ -190,7 +190,10 @@ Observe that we have an error. "No such image: consumer:latest" at `rasp11` (whi
 #### Step 04: Pushing the Docker images to all the Worker nodes
 You can use any of the following ways:
 ##### 01. The simple old way - 
-You can copy-paste the entire directory on every Worker node and run `docker compose up --build` command. 
+You can copy-paste the entire directory on every Worker node and run the `docker-compose up --build` command, which will build all the required images. Press `ctrl+c` to stop the running containers in the swarm and then run the `docker stack deploy -c docker-compose.yml myapp` command. It will give you an output like below:
+![Image](https://github.com/user-attachments/assets/8bd22878-7147-421e-aa4a-6713b75a2394)
+You can notice that one producer service is running on `rasp11` and two consumer services are running on `localhost` and `rasp11`.
+ 
 ##### 02. Push images to Docker Registry - 
 - Login to your docker account: `docker login`
 - Tag the image with your Docker Hub username: `docker tag consumer:latest <your-dockerhub-username>/consumer:latest`
