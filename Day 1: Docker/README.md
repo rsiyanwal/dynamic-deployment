@@ -225,9 +225,9 @@ When you deploy the stack using `docker stack deploy` the Docker Swarm uses the 
 ****
 ### Congratulations on completing Day 01 :fire:. I know it wasn't easy. You deserve a pat on your back. Good work!
 
-
-
-
+> [!IMPORTANT]
+> P.S. I mentioned before that you should make a list of all the tasks we are performing manually.
+> Have you done that for today?
 
 
 
