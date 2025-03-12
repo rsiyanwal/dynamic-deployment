@@ -136,7 +136,31 @@ consumer:
 ...
 ```
 Finally, run the Docker Stack command: `docker stack deploy -c docker-compose.yml myapp`
-Make sure to check if your Swarm cluster is working. You might remember the commands from Day 01 that will help you.
+Make sure to check if your Swarm cluster is working. You might remember the commands from Day 01 that will help you. 
+
+P.S. Don't forget that you have exposed your host's port 5000 to the application: `curl http://127.0.0.1:5000/number`
+
+## What else can Docker Swarm do?
+### **Scale up** the services: 
+Run: `docker service scale myapp_consumer=5`
+![Image](https://github.com/user-attachments/assets/b170e279-ec8b-4918-a633-edd7dcf113e5)
+
+### **Load balancing**: 
+Let's try to simulate some traffic.
+- First, get the IP address of any of the Worker nodes. You should know it, but if you don't:
+  - Run: `docker node inspect <your-worker-node> | grep Addr`
+- Run: `for i in {1..20}; do curl http://<any-node-IP>:5000/number; done` (you can run it on any of the machines)
+![Image](https://github.com/user-attachments/assets/2e02e8dd-033d-40a8-ada6-390bb4aaebbc)
+- In the image above, notice how the requests are distributed among the nodes. We've only made 20 requests in a second. Let's increase the load even further.
+- Install [wrk](https://github.com/wg/wrk): `sudo apt install wrk -y`
+- Then, run: `wrk -t4 -c20 -d30s http://<any-node-IP>:5000/number`. This will simulate 4 threads, 20 concurrent users, sending requests for 30 seconds.
+- **Observe** how requests are handled.
+- Try simulating the traffic again, and this time, use `docker stats` to see how each node is performing. If a node is struggling somewhere, the load is not evenly balanced (remember, you have to run this command on both nodes as both of them have replicas of the Producer service).
+- **Observe the performance again**
+![Image](https://github.com/user-attachments/assets/2b64a378-f362-4523-9375-3f5ab9dff6a1)
+
+
+
 
 
 
