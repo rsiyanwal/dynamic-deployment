@@ -1,0 +1,33 @@
+version: "3.8"
+services:
+  producer:
+    image: <your-dockerhub-username>/producer:multi-arch
+    build:
+      context: .
+      dockerfile: Dockerfile-producer
+    ports:
+      - "5000:5000"
+    deploy:
+#      placement:
+#        constraints:
+#          - node.hostname == localhost
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  consumer:
+    image: <your-dockerhub-username>/consumer:multi-arch
+    build:
+      context: .
+      dockerfile: Dockerfile-consumer
+    depends_on:
+      - producer
+    deploy:
+#        placement:
+#          constraints:
+#            - node.hostname == localhost
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+# You can even specify a particular node to deploy a service.  
