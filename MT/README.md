@@ -11,3 +11,4 @@
 | Initializing Docker Swarm | Ran `docker swarm init` & `docker swarm join` |
 | Deploying the Stack | Ran `docker stack deploy -c docker-compose.yml myapp` |
 | Debugging Errors | Manually checked logs & container status |
+| Docker Hub | Manually tagging, pushing, and pulling images to/from Docker Hub|
