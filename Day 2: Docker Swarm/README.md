@@ -4,6 +4,7 @@ Today, you will:
 	- Deploy them on heterogeneous Swarm cluster (different CPU architectures)
 - **Scale services** using Docker Swarm
 - **Load balancing**
+- **Auto Scaling**
 - Perform **rolling updates** with no downtime
 - Test **automatic service recovery**
 - **Understand Orchestration** by comparing Docker Compose and Docker Swarm.
