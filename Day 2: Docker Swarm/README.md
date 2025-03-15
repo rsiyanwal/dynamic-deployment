@@ -1,10 +1,9 @@
-# Day 02: Docker Swarm
+# Day 02: Docker Swarm and more
 Today, you will:
 - Build **Multi-arch** images
 	- Deploy them on heterogeneous Swarm cluster (different CPU architectures)
 - **Scale services** using Docker Swarm
 - **Load balancing**
-- **Auto Scaling**
 - Perform **rolling updates** with no downtime
 - Test **automatic service recovery**
 - **Understand Orchestration** by comparing Docker Compose and Docker Swarm.
@@ -408,11 +407,32 @@ Transfer/sec:    125.97KB
 The load was lighter than before, but we still got 983 connection errors and 127 timeouts.
 ***
 ### Can we do better?
-How about we try to balance the load better than before and maybe dynamically increase the `Producer service` replicas as the requests increase?
+<!-- How about we balance the load better than before and maybe dynamically increase the `Producer service` replicas as the requests increase? 
+Let's learn a few words first:
+- **Proxy:** A proxy is a server that _sits_ in between a client and a server. It _forwards_ client requests to servers and _returns_ the server's responses to the clients. The server sees the proxy's IP address instead of the client's. If you have a proxy, you can _cache_ common responses, too, and you can also block certain requests (requests that are malicious in nature).
+- **Reverse proxy:** It also sits in between clients and servers, but it hides the server's identity from the client. Basically, the client doesn't know which server has given the response. The Proxy server distributes the incoming traffic across multiple servers to ensure an even load balance.
+- **NGINX**: It is an open-source software used as a **webserver**, **reverse proxy**, **load balancer**, and **HTTP cache**. It is a low-resource consumption software. -->
+How about we dynamically increase the number of replicas as the traffic load increases? Let's **Auto-Scale** Producers.
+Docker Swarm does not support auto-scaling, but we can monitor traffic and scale producers dynamically. But let's think about this situation first. What would you do if I gave you this problem to solve? 
+- I would have to start thinking about how I can monitor the containers in real time. Maybe, based on CPU or memory utilization, I'd try to scale the services.
+- For that, I need something to monitor the containers.
+- I also need to know how the containers use their resources as time progresses.
+- Finally, I can create a simple Python code to scale the containers based on the abovementioned two requirements.
+Have you thought that as well? (let me know!) To implement the idea that I discussed above, we'd need two open-source tools: **[Prometheus](https://prometheus.io/)** and **[cAdvisor](https://github.com/google/cadvisor)**.
+#### cAdvisor
+**Container Advisor (cAdvisor)** is used to monitor resource usage and performance characteristics of running containers. 
+- It provides real-time container-level metrics: CPU usage, memory usage, network I/O, and disk I/O
+- It provides information via an HTTP API, therefore, it is easy to integrate with other tools
+- It runs as a container itself
 
+#### Prometheus
+**Prometheus** is used for monitoring and alerting.
+- It stores the data (metrics in our case) in a time-series database, which we can use for analysis
+- It allows us to query data (using PromQL) and create custom alerts (based on pre-defined conditions, such as CPU usage > 70%)
+- It can _scrape_ data periodically from various resources (therefore, we can use it to scrape data from cAdvisor)
+- We can visualize data using [**Grafana**](https://grafana.com/)
 
-
-
-
-
-
+So, we can _configure_ Prometheus to _scrape_ metrics from cAdvisor, use it to _monitor the performance_ of the Docker Swarm services, and _automate_ the decisions accordingly (such as scaling the replicas) using a Python script. Sounds good?
+> [!IMPORTANT]
+> But wait! Why do we need these tools in the first place? Can't we have a simple solution?
+> Well, I can think of a simpler solution right now. We can create a 
