@@ -432,7 +432,82 @@ Have you thought that as well? (let me know!) To implement the idea that I discu
 - It can _scrape_ data periodically from various resources (therefore, we can use it to scrape data from cAdvisor)
 - We can visualize data using [**Grafana**](https://grafana.com/)
 
+Basically,
+| **cAdvisor** | **Prometheus** |
+| ------------ | -------------- |
+| Collects container-level metrics | Can store data, alert, and allows queries |
+| Does not store metrics | Stores in a time-series DB | 
+| No query language | PromQL |
+| No alerting capability | Supports alerting | 
+| Provide metrics via HTTP API | Can scrape data from various resources, including HTTP |
+
 So, we can _configure_ Prometheus to _scrape_ metrics from cAdvisor, use it to _monitor the performance_ of the Docker Swarm services, and _automate_ the decisions accordingly (such as scaling the replicas) using a Python script. Sounds good?
 > [!IMPORTANT]
 > But wait! Why do we need these tools in the first place? Can't we have a simple solution?
-> Well, I can think of a simpler solution right now. We can create a 
+> Well, we can write a shell script to run the `docker stats` command, extract the CPU and memory usage, and deploy the services as required. But we will soon run into various problems. For starters, `docker stats` only shows per-container CPU and memory usage **at the moment** it was checked. Using **CPU and memory usage at a single point in time** to scale can lead to erratic scaling (If CPU spikes briefly but drops in 2 seconds, the script may scale up services unnecessarily). We also have to code for **historical data** to consider patterns and trends. We must do this for all the containers and aggregate the results for further processing. It can become problematic if the scale increases drastically.
+
+Using Prometheus and cAdvisor provides a convenient solution. We can collect the data continuously, we can use historical data, we can easily monitor all the nodes, and we can have threshold-based alerts natively. Still, no solution is perfect. We can still use a shell script for basic auto-scaling, but it's a good choice to use Prometheus and cAdvisor when running in production. But before jumping to these tools, we must be familiar with some directories. We will use the command `ls -l`, which lists the content of a directory in a long format as a starting point. 
+
+Run: `ls -l /sys`, which may give you an output like this:
+```
+total 0
+drwxr-xr-x   2 root root 0 Mar 15 19:17 block
+drwxr-xr-x  29 root root 0 Mar 15 19:17 bus
+drwxr-xr-x  64 root root 0 Aug 26  2024 class
+drwxr-xr-x   4 root root 0 Aug 26  2024 dev
+drwxr-xr-x  10 root root 0 Aug 26  2024 devices
+drwxr-xr-x   3 root root 0 Aug 26  2024 firmware
+drwxr-xr-x   9 root root 0 Jan  1  1970 fs
+drwxr-xr-x  14 root root 0 Jan  1  1970 kernel
+drwxr-xr-x 173 root root 0 Jan  1  1970 module
+drwxr-xr-x   2 root root 0 Mar 17 16:34 power
+```
+`/sys` is a virtual filesystem that provides information about the system's hardware, devices, and kernel. Each directory in `/sys` corresponds to a specific aspect of the system:
+- `block`: Information about block devices (such as disks)
+- `bus`: information about system buses (such as USB)
+- `class`: Information about device classes
+- `devices`: Detailed information about physical and virtual devices
+- `kernel`: Kernel related information
+- `power`: Power management information
+**The structure of the `/sys` directory can vary depending on the Linux distribution, kernel version, etc. Therefore, explore these directories at your own pace.** Understand how the hierarchy in this directory. To give you an idea of what we can do with these libraries, I'll show you how to **calculate current CPU and memory utilization using the `/sys` directory**. That should give you a hazy feeling of how certain tools that output the information of the machine's CPU and memory are created (keep in mind that I am using Raspberry Pi 4b running a Linux-based Raspbian OS). 
+
+You can already check the current **CPU frequency** of one of the CPUs using: `cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq`. Since the Raspberry Pi I am using has 4 CPUs, I can run this command individually for all of them. 
+>[!NOTE]
+>CPU frequency means the **clock speed** at which the CPU is operating at the moment. It is measured in **Hertz(Hz)** (typically in Gigahertz(GHz)). If a CPU is running at 2.4 GHz, it is performing 2.4 billion clock cycles per second.  
+
+Run: `cat /sys/fs/cgroup/cpu.stat`
+
+#### Step 01: Install Prometheus and cAdvisor
+Create `cAdvisor` and `prometheus` services in `docker-compose.yml`:
+```
+...
+ # Adding cAdvisor and Prometheus as services   
+    cadvisor:
+      image: gcr.io/cadvisor/cadvisor
+      ports:
+        - "8081:8080"
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - /:/rootfs:ro
+        - /var/lib/docker/:/var/lib/docker:ro
+      deploy:
+        placement:
+          constraints:
+            - node.role == manager
+
+    prometheus:
+      image: prom/prometheus
+      ports:
+        - "9090:9090"
+      volumes:
+        - ./prometheus.yml:/etc/prometheus/prometheus.yml
+```
+
+
+
+
+
+
+
+
+
