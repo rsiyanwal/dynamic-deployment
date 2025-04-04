@@ -477,6 +477,10 @@ You can already check the current **CPU frequency** of one of the CPUs using: `c
 
 Run: `cat /sys/fs/cgroup/cpu.stat`
 
+>[!CAUTION]
+>I have changed my location temporarily, which means my network has changed, and so have the IPs. Now, `swarm-master` and `rasp11` have IPs `192.168.1.26` and `192.168.1.13`, respectively. Also, my new network isn't as capable as the previous one, so the speed is slow, and there are significant packet drops. Therefore, we have to perform certain benchmarking again. Of course, you don't have to do all of this. Whenever there is a change, I'll mention it.  
+
+The new load at which we are testing is: ``
 #### Step 01: Install Prometheus and cAdvisor
 Create `cAdvisor` and `prometheus` services in `docker-compose.yml`:
 ```
