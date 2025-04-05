@@ -639,4 +639,143 @@ elif [[ $usage_low -eq 1 && $replicas -gt 1 ]]; then
 - If CPU > 20% and current replicas are < 10, add 1 replica.
 - Remove 1 replica if CPU < 10% and current replicas > 1.
 
-There are so many hyperparameters to test. For example, **you can change the CPU % usage, change the avergae CPU usage interval, etc.**. Here's the output I got.
+There are so many hyperparameters to test. For example, **you can change the CPU % usage, change the avergae CPU usage interval, etc.**. This is the [output](https://github.com/rsiyanwal/dynamic-deployment/blob/main/Day%202%3A%20Docker%20Swarm/producer_service_scaled.log) I got from the `auto_scale_bash.sh` script and the output is from the load testing. I request you to analyze both outputs.
+```
+Summary:
+  Total:	301.2776 secs
+  Slowest:	12.3848 secs
+  Fastest:	0.0219 secs
+  Average:	0.6972 secs
+  Requests/sec:	273.8140
+  
+  Total data:	1185877 bytes
+  Size/request:	14 bytes
+
+Response time histogram:
+  0.022 [1]	|
+  1.258 [71864]	|ΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûá
+  2.494 [8319]	|ΓûáΓûáΓûáΓûáΓûá
+  3.731 [1516]	|Γûá
+  4.967 [437]	|
+  6.203 [130]	|
+  7.440 [44]	|
+  8.676 [46]	|
+  9.912 [3]	|
+  11.148 [1]	|
+  12.385 [4]	|
+
+
+Latency distribution:
+  10% in 0.2387 secs
+  25% in 0.3174 secs
+  50% in 0.5337 secs
+  75% in 0.7224 secs
+  90% in 1.4868 secs
+  95% in 1.9623 secs
+  99% in 3.5280 secs
+
+Details (average, fastest, slowest):
+  DNS+dialup:	0.2888 secs, 0.0219 secs, 12.3848 secs
+  DNS-lookup:	0.0000 secs, 0.0000 secs, 0.0000 secs
+  req write:	0.0009 secs, 0.0000 secs, 1.6446 secs
+  resp wait:	0.3515 secs, 0.0062 secs, 10.7597 secs
+  resp read:	0.0559 secs, 0.0000 secs, 7.9951 secs
+
+Status code distribution:
+  [200]	82365 responses
+
+Error distribution:
+  [129]	Get "http://192.168.1.13:5000/number": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+```
+
+Let's test the load again but this time without running `auto_scale_bash.sh` script.
+```
+Summary:
+  Total:	304.3098 secs
+  Slowest:	13.6051 secs
+  Fastest:	0.1723 secs
+  Average:	1.0515 secs
+  Requests/sec:	188.0945
+  
+  Total data:	824256 bytes
+  Size/request:	14 bytes
+
+Response time histogram:
+  0.172 [1]	|
+  1.516 [48256]	|ΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûáΓûá
+  2.859 [7022]	|ΓûáΓûáΓûáΓûáΓûáΓûá
+  4.202 [1071]	|Γûá
+  5.545 [529]	|
+  6.889 [163]	|
+  8.232 [122]	|
+  9.575 [49]	|
+  10.919 [0]	|
+  12.262 [25]	|
+  13.605 [1]	|
+
+
+Latency distribution:
+  10% in 0.6089 secs
+  25% in 0.6846 secs
+  50% in 0.7772 secs
+  75% in 0.9869 secs
+  90% in 1.8147 secs
+  95% in 2.3655 secs
+  99% in 4.9570 secs
+
+Details (average, fastest, slowest):
+  DNS+dialup:	0.3800 secs, 0.1723 secs, 13.6051 secs
+  DNS-lookup:	0.0000 secs, 0.0000 secs, 0.0000 secs
+  req write:	0.0001 secs, 0.0000 secs, 0.0346 secs
+  resp wait:	0.6266 secs, 0.0124 secs, 11.7519 secs
+  resp read:	0.0447 secs, 0.0000 secs, 7.9116 secs
+
+Status code distribution:
+  [200]	57239 responses
+```
+| Metric                      | With Autoscaling (`auto_scale_bash.sh`) | Without Autoscaling | Difference (%) |
+|-----------------------------|----------------------------------------|---------------------|----------------|
+| **Total Duration**          | 301.28 secs                           | 304.31 secs         | +1.0%          |
+| **Total Requests**          | 82,365                                | 57,239              | -30.5%         |
+| **Requests/sec**            | 273.81                                | 188.09              | -31.3%         |
+| **Average Latency**         | 0.6972 secs                           | 1.0515 secs         | +50.8%         |
+| **Slowest Request**         | 12.3848 secs                          | 13.6051 secs        | +9.9%          |
+| **Fastest Request**        | 0.0219 secs                           | 0.1723 secs         | +686.8%        |
+| **Throughput**              | 1185877 bytes                         | 824256 bytes        | -30.5%         |
+| **90th %ile Latency**      | 1.4868 secs                           | 1.8147 secs         | +22.0%         |
+| **99th %ile Latency**      | 3.5280 secs                           | 4.9570 secs         | +40.5%         |
+| **Successful Responses**   | 82,236 (200 OK)                       | 57,239 (200 OK)     | ~-30.5%         |
+| **Timeout Errors**         | 129                                   | 0                   | -100%          |
+| **DNS+Dialup Avg**         | 0.2888 secs                           | 0.3800 secs         | +31.6%         |
+| **Response Wait Avg**      | 0.3515 secs                           | 0.6266 secs         | +78.3%         |
+
+### Key Observations:
+1. **Performance**:
+   - Autoscaling improved throughput by **43.6%** (273.81 vs 188.09 req/sec)
+   - Reduced average latency by **33.7%** (0.6972s vs 1.0515s)
+   - Handled **44% more requests** (82,365 vs 57,239)
+
+2. **Error Handling**:
+   - Autoscaled test had 129 timeouts (due to higher load)
+   - Non-autoscaled test had zero errors (but significantly lower traffic)
+
+3. **Tail Latency**:
+   - 99th percentile latency was **1.4s faster** with autoscaling (3.528s vs 4.957s)
+
+4. **Resource Utilization**:
+   - Autoscaling better utilized available resources (higher throughput with lower latency)
+   - Non-autoscaled system showed congestion at lower loads (higher baseline latency)
+
+Considering the small experiment we just did on a very specific condition, we can conclude that _auto-scaling significantly improved system performance_. 
+**So, are we done with auto-scaling?** Its far from over. Auto-scaling is deceptive and complex and using only CPU usage % might be over simplification. 
+- High CPU usage doesn't always mean that the service is overloaded.
+- Low CPU usage doesn't always mean the system is idle, it might be performing some I/O or memory bound operations or maybe waiting for network or disk.
+- You will observe a lot of **oscillations** (scale up then immediately scale done) if you change the CPU usage logic.
+- New replicas tak time to spin up and during this period they are not available to handle requests.
+- Decisions made at a certain time interval may be too fast or too slow depending on the workload.
+- In resource-constrained enviornments where you have to be as energy efficient as possible, scaling up unnecessarily wastes energy and scaling down aggressively may hurt availability.
+- CPU % only tells _how busy the machine is_ and not _how well the application is handling the workload_.
+- It doesn't consider other bottlenecks. Maybe your application can handle requests efficiently but it is slow because of slow database or remote API.
+
+Instead of CPU %, we can try scaling with **request rate**. We can scale up or down based on the traffic. We can also write our logic around queues. If requests are piling up we can scale up. We can combine CPU, memory, latency, queue length, etc. But, we are not going to do it in this workshop. Instead, we will use **Kubernetes** as a replacement of Docker Swarm which has native auto-scaling feature. It may or may not be the best. We'll test it in future.
+
