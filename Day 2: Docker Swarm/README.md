@@ -480,38 +480,163 @@ Run: `cat /sys/fs/cgroup/cpu.stat`
 >[!CAUTION]
 >I have changed my location temporarily, which means my network has changed, and so have the IPs. Now, `swarm-master` and `rasp11` have IPs `192.168.1.26` and `192.168.1.13`, respectively. Also, my new network isn't as capable as the previous one, so the speed is slow, and there are significant packet drops. Therefore, we have to perform certain benchmarking again. Of course, you don't have to do all of this. Whenever there is a change, I'll mention it.  
 
-The new load at which we are testing is: ``
+The new load which we are testing is: `hey -n 100000 -c 200 -z 5m http://192.168.1.26:5000/number`
+
+
 #### Step 01: Install Prometheus and cAdvisor
 Create `cAdvisor` and `prometheus` services in `docker-compose.yml`:
 ```
-...
- # Adding cAdvisor and Prometheus as services   
-    cadvisor:
-      image: gcr.io/cadvisor/cadvisor
-      ports:
-        - "8081:8080"
-      volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
-        - /:/rootfs:ro
-        - /var/lib/docker/:/var/lib/docker:ro
-      deploy:
-        placement:
-          constraints:
-            - node.role == manager
+version: "3.8"
+services:
+  producer:
+    image: rahulsiyanwal/producer:multi-arch
+    build:
+      context: .
+      dockerfile: Dockerfile-producer
+    ports:
+      - "5000:5000"
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
 
-    prometheus:
-      image: prom/prometheus
-      ports:
-        - "9090:9090"
-      volumes:
-        - ./prometheus.yml:/etc/prometheus/prometheus.yml
+  consumer:
+    image: rahulsiyanwal/consumer:multi-arch
+    build:
+      context: .
+      dockerfile: Dockerfile-consumer
+    depends_on:
+      - producer
+    deploy:  
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+ 
+ # Adding cAdvisor and Prometheus as services   
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor
+    ports:
+      - "8080:8080"
+    command:
+      - "--housekeeping_interval=3s"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /:/rootfs:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /sys:/sys:ro
+      - /dev/disk:/dev/disk:ro
+    deploy:
+      mode: global
+    
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
 ```
 
+**cadvisor:**
+- Runs globally on all nodes (due to `mode: global`)
+- Has a 3-second interval to collect metrics (you can change the interval)
+- Has extensive filesystem access for monitoring (we've already seen how the files can be used to monitor)
 
+**Prometheus:**
+- Running only on manager nodes (I have made a placement constraint, which you can change)
+- Mounts a custom configuration file (`prometheus.yml`)
+- Exposes port 9090
 
+**`prometheus.yml` file:**
+```
+global:
+   scrape_interval: 2s
 
+scrape_configs:
+   - job_name: 'cadvisor'
+     static_configs:
+        - targets: ["192.168.1.13:8080", "192.168.1.26:8080"]
+```
+- It is set to scrape data after every 2 seconds
+- As of now, we have hardcoded IP addresses of our nodes (using `targets`). It should be dynamic.
 
+![Image](https://github.com/user-attachments/assets/0618184d-fc29-455c-9766-db6424406e10)
+Now using `Prometheus` we are able to scrap the data from all the nodes with the help of `cAdvisor` (the image and `yml` file above should give you this idea). We are targeting CPU usages to scale the `Producer service`. We are **hypothesising** that if we increase the replicas of `Producer service` when CPU usage hits a certain threshold, we can service more requests. I have created a bash file that will run along-side our application. Bash file: `auto_scale_bash.sh`
+```
+#!/bin/bash
 
+# Function to scrap CPU usage of myapp_producer
+get_cpu_usage() {
+  curl -s "http://192.168.1.26:9090/api/v1/query?query=$(echo -n 'avg(rate(container_cpu_usage_seconds_total{container_label_com_docker_swarm_service_name="myapp_producer"}[1m])) * 100' | jq -sRr @uri)" |
+  jq -r '.data.result[0].value[1]'
+}
 
+# Initial number of replicas
+replicas=1
 
+# Run loop forever
+while true; do
+  cpu_usage=$(get_cpu_usage)
 
+  # Check if value was fetched
+  if [[ -z "$cpu_usage" || "$cpu_usage" == "null" ]]; then
+    echo "Could not fetch CPU usage. Skipping..."
+  else
+    echo "CPU usage: $cpu_usage%, Replicas: $replicas"
+
+    # Convert to float-compatible comparison (bc required)
+    usage_high=$(echo "$cpu_usage > 20.0" | bc)
+    usage_low=$(echo "$cpu_usage < 10.0" | bc)
+
+    if [[ $usage_high -eq 1 && $replicas -lt 10 ]]; then
+      replicas=$((replicas + 1))
+      docker service scale myapp_producer=$replicas
+      echo "Scaling up to $replicas"
+    elif [[ $usage_low -eq 1 && $replicas -gt 1 ]]; then
+      replicas=$((replicas - 1))
+      docker service scale myapp_producer=$replicas
+      echo "Scaling down to $replicas"
+    fi
+  fi
+
+  sleep 2
+done
+
+```
+![Image](https://github.com/user-attachments/assets/c5b1723e-b1eb-4b34-9e33-752ea409905e)
+
+Let's discect -
+```
+  curl -s "http://192.168.1.26:9090/api/v1/query?query=$(echo -n 'avg(rate(container_cpu_usage_seconds_total{container_label_com_docker_swarm_service_name="myapp_producer"}[1m])) * 100' | jq -sRr @uri)" |
+  jq -r '.data.result[0].value[1]'
+```
+- Using PromSQL we are quering `Prometheus` to get the average CPU usage of `myapp_producer` service over the last 1 minute.
+- `curl -s` fetches data from `Prometheus` running at `192.168.1.26:9090`.
+- `rate(...[1m])` computes per-second CPU usage over a 1-minute window.
+- `avg(...) * 100` averages the rate and converts it to a percentage.
+- `jq -r '.data.result[0].value[1]'` extracts the CPU usage value from Prometheus's JSON response.
+
+**Scaling Logic:**
+```
+...
+usage_high=$(echo "$cpu_usage > 20.0" | bc)   # 1 if >20%, else 0
+usage_low=$(echo "$cpu_usage < 10.0" | bc)     # 1 if <10%, else 0
+...
+if [[ $usage_high -eq 1 && $replicas -lt 10 ]]; then
+  replicas=$((replicas + 1))
+  docker service scale myapp_producer=$replicas
+  echo "Scaling up to $replicas"
+...
+elif [[ $usage_low -eq 1 && $replicas -gt 1 ]]; then
+  replicas=$((replicas - 1))
+  docker service scale myapp_producer=$replicas
+  echo "Scaling down to $replicas"
+...
+```
+- If CPU > 20% and current replicas are < 10, add 1 replica.
+- Remove 1 replica if CPU < 10% and current replicas > 1.
+
+There are so many hyperparameters to test. For example, **you can change the CPU % usage, change the avergae CPU usage interval, etc.**. Here's the output I got.
