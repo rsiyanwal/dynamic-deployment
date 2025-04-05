@@ -779,3 +779,25 @@ Considering the small experiment we just did on a very specific condition, we ca
 
 Instead of CPU %, we can try scaling with **request rate**. We can scale up or down based on the traffic. We can also write our logic around queues. If requests are piling up we can scale up. We can combine CPU, memory, latency, queue length, etc. But, we are not going to do it in this workshop. Instead, we will use **Kubernetes** as a replacement of Docker Swarm which has native auto-scaling feature. It may or may not be the best. We'll test it in future.
 
+***
+## Rest of the things
+### Rolling updates with no downtime
+What are the chances that you will update your application? I guess the chances are huge. Let's roll the updates with zero downtime. Initially you will start with some changes in your service. Maybe you want to print something extra. You will make changes in the service's python file. Once the changes are made you need to rebuild the image:
+```
+docker build -t <service_name>:<tag> -f <dockerfile_of_the_service> .
+```
+And then you will update the service deployed via `docker stack`:
+```
+docker service update --image <service_name>:<tag> <app_name>
+```
+### Testing automatic service recovery
+If you haven't done it yet, you can kill a node and observe how `Docker Swarm` is recovering. Let's simulate a failure. Kill a node running `Consumer` service:
+```
+docker node update --availability drain <node_ID>
+```
+And then check if `Swarm` moves the service to another node:
+```
+docker service ps myapp_consumer
+```
+***
+I think we are done for the day. **Congratulations, you are amazing**. The torture will continue. BTW, Are you making a list of the manual tasks we are doing? If not, you SHOULD. 
